@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reitstunden Wochenplan</title>
-  <link rel="icon" href="logo_v99.png" type="image/png">
-  <link rel="apple-touch-icon" href="logo_v99.png">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="icon" href="logo_v99.png" type="image/png" />
+  <link rel="apple-touch-icon" href="logo_v99.png" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      margin: 1rem;
       background: black;
       color: white;
+      margin: 1rem;
     }
     header {
       text-align: center;
@@ -60,46 +60,42 @@
     .pdf-button, .excel-button {
       padding: 0.7rem 2rem;
       font-size: 1rem;
+      background: #e91e63;
+      color: white;
       border: none;
       border-radius: 5px;
       margin: 0.5rem;
-      cursor: pointer;
     }
-    .pdf-button {
-      background: #2196F3;
-      color: white;
-    }
-    .pdf-button:hover {
-      background: #0b7dda;
-    }
-    .excel-button {
-      background: pink;
-      color: black;
-    }
-    .excel-button:hover {
-      background: #ff69b4;
+    .pdf-button:hover, .excel-button:hover {
+      background: #c2185b;
     }
   </style>
 </head>
 <body>
   <header>
-    <img src="logo_v99.png" alt="Patchy Ranch Logo">
+    <img src="logo_v99.png" alt="Patchy Ranch Logo" />
     <h1>Reitstunden Wochenplan</h1>
   </header>
+
   <form id="addForm">
     <label>Schülername:</label>
-    <input type="text" id="schueler" required>
+    <input type="text" id="schueler" required />
     <label>Wochentag:</label>
     <select id="wochentag">
-      <option>Montag</option><option>Dienstag</option><option>Mittwoch</option>
-      <option>Donnerstag</option><option>Freitag</option><option>Samstag</option><option>Sonntag</option>
+      <option>Montag</option>
+      <option>Dienstag</option>
+      <option>Mittwoch</option>
+      <option>Donnerstag</option>
+      <option>Freitag</option>
+      <option>Samstag</option>
+      <option>Sonntag</option>
     </select>
     <label>Datum:</label>
-    <input type="date" id="datum" required>
+    <input type="date" id="datum" required />
     <label>Uhrzeit (optional):</label>
-    <input type="time" id="uhrzeit">
+    <input type="time" id="uhrzeit" />
     <label>Pferd / Notiz:</label>
-    <input type="text" id="notiz">
+    <input type="text" id="notiz" />
     <label>Typ:</label>
     <select id="typ">
       <option>Reitstunde</option>
@@ -107,14 +103,24 @@
     </select>
     <button type="submit">Eintragen</button>
   </form>
+
   <div class="button-container">
     <label for="monatFilter">Nach Monat filtern:</label>
     <select id="monatFilter" onchange="anzeigen()">
       <option value="">Alle</option>
     </select>
+
+    <label for="typFilter">Typ filtern:</label>
+    <select id="typFilter" onchange="anzeigen()">
+      <option value="">Alle</option>
+      <option value="Reitstunde">Reitstunde</option>
+      <option value="Reitbeteiligung">Reitbeteiligung</option>
+    </select>
+
     <button class="pdf-button" onclick="exportPDF()">PDF exportieren</button>
     <button class="excel-button" onclick="exportExcel()">Excel exportieren</button>
   </div>
+
   <div id="printArea" style="overflow-x:auto">
     <table id="wochenTabelle">
       <thead>
@@ -125,70 +131,122 @@
       <tbody id="tabelleBody"></tbody>
     </table>
   </div>
-  <script>
-    let stunden = JSON.parse(localStorage.getItem('wochenplan')) || [];
 
-    const speichern = () => localStorage.setItem('wochenplan', JSON.stringify(stunden));
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
 
-    const extractMonate = () => {
-      const monate = new Set();
-      stunden.forEach(e => {
-        const monat = new Date(e.datum).toLocaleString('de-DE', { month: 'long' });
-        if (monat) monate.add(monat);
-      });
-      return Array.from(monate);
+    const firebaseConfig = {
+      apiKey: "AIzaSyApbpJxOwiAep9U1dgd1VtSmbXJm44phAM",
+      authDomain: "ranchapp-8eff2.firebaseapp.com",
+      projectId: "ranchapp-8eff2",
+      storageBucket: "ranchapp-8eff2.appspot.com",
+      messagingSenderId: "662200775507",
+      appId: "1:662200775507:web:63588f0221150f8fbb27a6"
     };
 
-    const updateFilterDropdown = () => {
-      const filter = document.getElementById('monatFilter');
-      const selected = filter.value;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const speichern = async (eintrag) => {
+      await addDoc(collection(db, "reitstunden"), eintrag);
+    };
+
+    const laden = async () => {
+      const snapshot = await getDocs(collection(db, "reitstunden"));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    };
+
+    const loeschen = async (id) => {
+      await deleteDoc(doc(db, "reitstunden", id));
+      anzeigen();
+    };
+
+    window.exportPDF = function () {
+      const element = document.getElementById("printArea");
+      html2pdf().from(element).set({
+        margin: 0.5,
+        filename: "reitstunden.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "in", format: "a4", orientation: "landscape" }
+      }).save();
+    };
+
+    window.exportExcel = async function () {
+      const eintraege = await laden();
+      const ws = XLSX.utils.json_to_sheet(eintraege);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Reitstunden");
+      XLSX.writeFile(wb, "reitstunden.xlsx");
+    };
+
+    document.getElementById("addForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const eintrag = {
+        schueler: document.getElementById("schueler").value.trim(),
+        wochentag: document.getElementById("wochentag").value,
+        datum: document.getElementById("datum").value,
+        uhrzeit: document.getElementById("uhrzeit").value || "",
+        notiz: document.getElementById("notiz").value.trim(),
+        typ: document.getElementById("typ").value
+      };
+      await speichern(eintrag);
+      e.target.reset();
+      anzeigen();
+    });
+
+    window.anzeigen = async () => {
+      const daten = await laden();
+      const monatFilter = document.getElementById("monatFilter").value;
+      const typFilter = document.getElementById("typFilter").value;
+
+      const gefiltert = daten.filter(e => {
+        const monatName = new Date(e.datum).toLocaleString("de-DE", { month: "long" });
+        return (!monatFilter || monatName === monatFilter) && (!typFilter || e.typ === typFilter);
+      });
+
+      const monate = [...new Set(daten.map(e => new Date(e.datum).toLocaleString("de-DE", { month: "long" })))];
+      const filter = document.getElementById("monatFilter");
       filter.innerHTML = '<option value="">Alle</option>';
-      extractMonate().sort().forEach(m => {
-        const option = document.createElement('option');
+      monate.sort().forEach(m => {
+        const option = document.createElement("option");
         option.value = m;
         option.textContent = m;
-        if (m === selected) option.selected = true;
+        if (m === monatFilter) option.selected = true;
         filter.appendChild(option);
       });
-    };
 
-    const anzeigen = () => {
-      const monatFilter = document.getElementById('monatFilter').value;
-      const gefiltert = monatFilter ? stunden.filter(e => new Date(e.datum).toLocaleString('de-DE', { month: 'long' }) === monatFilter) : stunden;
-      updateFilterDropdown();
-
-      const headerRow = document.getElementById('headerRow');
-      const tabelleBody = document.getElementById('tabelleBody');
+      const headerRow = document.getElementById("headerRow");
+      const tabelleBody = document.getElementById("tabelleBody");
       headerRow.innerHTML = '<th>Schüler</th>';
 
-      const wochentage = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+      const wochentage = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
       wochentage.forEach(tag => {
-        const th = document.createElement('th');
+        const th = document.createElement("th");
         th.textContent = tag;
         headerRow.appendChild(th);
       });
 
       const schuelerListe = [...new Set(gefiltert.map(e => e.schueler))].sort();
-      tabelleBody.innerHTML = '';
+      tabelleBody.innerHTML = "";
 
       schuelerListe.forEach(name => {
-        const tr = document.createElement('tr');
-        const tdName = document.createElement('td');
+        const tr = document.createElement("tr");
+        const tdName = document.createElement("td");
         const count = gefiltert.filter(e => e.schueler === name).length;
         tdName.textContent = `${name} (${count})`;
         tr.appendChild(tdName);
 
         wochentage.forEach(tag => {
-          const td = document.createElement('td');
+          const td = document.createElement("td");
           const eintraege = gefiltert.filter(e => e.schueler === name && e.wochentag === tag);
           if (eintraege.length) {
-            td.classList.add('highlight');
-            td.innerHTML = eintraege.map(e => `${e.datum.slice(5)}<br>${e.typ}${e.uhrzeit ? '<br>' + e.uhrzeit : ''}<br>${e.notiz}`).join('<hr>');
+            td.classList.add("highlight");
+            td.innerHTML = eintraege.map(e => `${e.typ} (${e.datum})<br>${e.uhrzeit}<br>${e.notiz}`).join("<hr>");
             td.onclick = () => {
-              if (confirm('Eintrag löschen?')) {
-                stunden = stunden.filter(e => !(e.schueler === name && e.wochentag === tag));
-                speichern();
-                anzeigen();
+              if (confirm("Eintrag löschen?")) {
+                eintraege.forEach(e => loeschen(e.id));
               }
             };
           }
@@ -198,40 +256,6 @@
         tabelleBody.appendChild(tr);
       });
     };
-
-    document.getElementById('addForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const eintrag = {
-        schueler: document.getElementById('schueler').value.trim(),
-        wochentag: document.getElementById('wochentag').value,
-        datum: document.getElementById('datum').value,
-        uhrzeit: document.getElementById('uhrzeit').value,
-        notiz: document.getElementById('notiz').value.trim(),
-        typ: document.getElementById('typ').value
-      };
-      stunden.push(eintrag);
-      speichern();
-      anzeigen();
-      e.target.reset();
-    });
-
-    function exportPDF() {
-      const element = document.getElementById('printArea');
-      const opt = {
-        margin: 0.5,
-        filename: 'reitstunden.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-      };
-      html2pdf().from(element).set(opt).save();
-    }
-
-    function exportExcel() {
-      const table = document.getElementById('wochenTabelle');
-      const wb = XLSX.utils.table_to_book(table, { sheet: "Reitstunden" });
-      XLSX.writeFile(wb, "reitstunden.xlsx");
-    }
 
     anzeigen();
   </script>
