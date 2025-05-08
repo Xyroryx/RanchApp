@@ -7,142 +7,59 @@
   <link rel="icon" href="logo_v99.png" type="image/png">
   <link rel="apple-touch-icon" href="logo_v99.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 1rem;
-      background: black;
-      color: white;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    header img {
-      max-height: 100px;
-      margin-bottom: 0.5rem;
-    }
-    form {
-      background: #222;
-      padding: 1rem;
-      border-radius: 10px;
-    }
-    input, select, button {
-      width: 100%;
-      margin-top: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      background: #333;
-      color: white;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #111;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.5rem;
-      text-align: center;
-    }
-    th {
-      background: #4CAF50;
-    }
-    .highlight {
-      background-color: #2d662d;
-    }
-    .button-container {
-      margin-top: 1rem;
-      text-align: center;
-    }
-    .pdf-button {
-      padding: 0.7rem 2rem;
-      font-size: 1rem;
-      background: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-    .pdf-button:hover {
-      background: #0b7dda;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <img src="logo_v99.png" alt="Patchy Ranch Logo">
-    <h1>Reitstunden Wochenplan</h1>
-  </header>
-  <form id="addForm">
-    <label>Schülername:</label>
-    <input type="text" id="schueler" required>
-    <label>Wochentag:</label>
-    <select id="wochentag">
-      <option>Montag</option><option>Dienstag</option><option>Mittwoch</option>
-      <option>Donnerstag</option><option>Freitag</option><option>Samstag</option><option>Sonntag</option>
-    </select>
-    <label>Datum:</label>
-    <input type="date" id="datum" required>
-    <label>Uhrzeit:</label>
-    <input type="time" id="uhrzeit" required>
-    <label>Pferd / Notiz:</label>
-    <input type="text" id="notiz">
-    <label>Typ:</label>
-    <select id="typ">
-      <option>Reitstunde</option>
-      <option>Reitbeteiligung</option>
-    </select>
-    <button type="submit">Eintragen</button>
-  </form>
-  <div class="button-container">
-    <label for="monatFilter">Nach Monat filtern:</label>
-    <select id="monatFilter" onchange="anzeigen()">
-      <option value="">Alle</option>
-    </select>
-    <button class="pdf-button" onclick="exportPDF()">PDF exportieren</button>
-  </div>
-  <div id="printArea" style="overflow-x:auto">
-    <table id="wochenTabelle">
-      <thead>
-        <tr id="headerRow">
-          <th>Schüler</th>
-        </tr>
-      </thead>
-      <tbody id="tabelleBody"></tbody>
-    </table>
-  </div>
-  <script>
-    let stunden = JSON.parse(localStorage.getItem('wochenplan')) || [];
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
 
-    const speichern = () => localStorage.setItem('wochenplan', JSON.stringify(stunden));
-
-    const extractMonate = () => {
-      const monate = new Set();
-      stunden.forEach(e => {
-        const monat = new Date(e.datum).toLocaleString('de-DE', { month: 'long' });
-        if (monat) monate.add(monat);
-      });
-      return Array.from(monate);
+    const firebaseConfig = {
+      apiKey: "AIzaSyApbpJxOwiAep9U1dgd1VtSmbXJm44phAM",
+      authDomain: "ranchapp-8eff2.firebaseapp.com",
+      projectId: "ranchapp-8eff2",
+      storageBucket: "ranchapp-8eff2.appspot.com",
+      messagingSenderId: "662200775507",
+      appId: "1:662200775507:web:63588f0221150f8fbb27a6",
+      measurementId: "G-JDR6PNZ195",
+      databaseURL: "https://ranchapp-8eff2-default-rtdb.europe-west1.firebasedatabase.app"
     };
 
-    const updateFilterDropdown = () => {
-      const filter = document.getElementById('monatFilter');
-      const selected = filter.value;
-      filter.innerHTML = '<option value="">Alle</option>';
-      extractMonate().sort().forEach(m => {
-        const option = document.createElement('option');
-        option.value = m;
-        option.textContent = m;
-        if (m === selected) option.selected = true;
-        filter.appendChild(option);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let stunden = [];
+
+    const speichern = (eintrag) => {
+      const neueRef = push(ref(db, 'reitstunden'));
+      set(neueRef, eintrag);
+    };
+
+    const ladeDaten = () => {
+      const stundenRef = ref(db, 'reitstunden');
+      onValue(stundenRef, (snapshot) => {
+        const daten = snapshot.val();
+        stunden = daten ? Object.values(daten) : [];
+        anzeigen();
       });
     };
 
-    const anzeigen = () => {
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('addForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const eintrag = {
+          schueler: document.getElementById('schueler').value.trim(),
+          wochentag: document.getElementById('wochentag').value,
+          datum: document.getElementById('datum').value,
+          notiz: document.getElementById('notiz').value.trim(),
+          typ: document.getElementById('typ').value
+        };
+        speichern(eintrag);
+        e.target.reset();
+      });
+      ladeDaten();
+    });
+
+    window.anzeigen = () => {
       const monatFilter = document.getElementById('monatFilter').value;
       const gefiltert = monatFilter ? stunden.filter(e => new Date(e.datum).toLocaleString('de-DE', { month: 'long' }) === monatFilter) : stunden;
-      updateFilterDropdown();
 
       const headerRow = document.getElementById('headerRow');
       const tabelleBody = document.getElementById('tabelleBody');
@@ -170,38 +87,73 @@
           const eintraege = gefiltert.filter(e => e.schueler === name && e.wochentag === tag);
           if (eintraege.length) {
             td.classList.add('highlight');
-            td.innerHTML = eintraege.map(e => `${e.typ}<br>${e.uhrzeit}<br>${e.notiz}`).join('<hr>');
-            td.onclick = () => {
-              if (confirm('Eintrag löschen?')) {
-                stunden = stunden.filter(e => !(e.schueler === name && e.wochentag === tag));
-                speichern();
-                anzeigen();
-              }
-            };
+            td.innerHTML = eintraege.map(e => `${e.typ}<br>${e.notiz}`).join('<hr>');
           }
           tr.appendChild(td);
         });
-
         tabelleBody.appendChild(tr);
       });
     };
-
-    document.getElementById('addForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const eintrag = {
-        schueler: document.getElementById('schueler').value.trim(),
-        wochentag: document.getElementById('wochentag').value,
-        datum: document.getElementById('datum').value,
-        uhrzeit: document.getElementById('uhrzeit').value,
-        notiz: document.getElementById('notiz').value.trim(),
-        typ: document.getElementById('typ').value
-      };
-      stunden.push(eintrag);
-      speichern();
-      anzeigen();
-      e.target.reset();
-    });
-
+  </script>
+  <style>
+    body { font-family: sans-serif; margin: 1rem; background: black; color: white; }
+    header { text-align: center; margin-bottom: 1rem; }
+    header img { max-height: 100px; margin-bottom: 0.5rem; }
+    form { background: #222; padding: 1rem; border-radius: 10px; }
+    input, select, button {
+      width: 100%; margin-top: 0.5rem; padding: 0.5rem;
+      border-radius: 5px; border: 1px solid #ccc; background: #333; color: white;
+    }
+    table { width: 100%; border-collapse: collapse; background: #111; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
+    th { background: #4CAF50; }
+    .highlight { background-color: #2d662d; }
+    .button-container { margin-top: 1rem; text-align: center; }
+    .pdf-button {
+      padding: 0.7rem 2rem; font-size: 1rem; background: #2196F3; color: white;
+      border: none; border-radius: 5px;
+    }
+    .pdf-button:hover { background: #0b7dda; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo_v99.png" alt="Patchy Ranch Logo">
+    <h1>Reitstunden Wochenplan</h1>
+  </header>
+  <form id="addForm">
+    <label>Schülername:</label>
+    <input type="text" id="schueler" required>
+    <label>Wochentag:</label>
+    <select id="wochentag">
+      <option>Montag</option><option>Dienstag</option><option>Mittwoch</option>
+      <option>Donnerstag</option><option>Freitag</option><option>Samstag</option><option>Sonntag</option>
+    </select>
+    <label>Datum:</label>
+    <input type="date" id="datum" required>
+    <label>Pferd / Notiz:</label>
+    <input type="text" id="notiz">
+    <label>Typ:</label>
+    <select id="typ">
+      <option>Reitstunde</option>
+      <option>Reitbeteiligung</option>
+    </select>
+    <button type="submit">Eintragen</button>
+  </form>
+  <div class="button-container">
+    <label for="monatFilter">Nach Monat filtern:</label>
+    <select id="monatFilter" onchange="anzeigen()">
+      <option value="">Alle</option>
+    </select>
+    <button class="pdf-button" onclick="exportPDF()">PDF exportieren</button>
+  </div>
+  <div id="printArea" style="overflow-x:auto">
+    <table id="wochenTabelle">
+      <thead><tr id="headerRow"><th>Schüler</th></tr></thead>
+      <tbody id="tabelleBody"></tbody>
+    </table>
+  </div>
+  <script>
     function exportPDF() {
       const element = document.getElementById('printArea');
       const opt = {
@@ -213,8 +165,6 @@
       };
       html2pdf().from(element).set(opt).save();
     }
-
-    anzeigen();
   </script>
 </body>
 </html>
