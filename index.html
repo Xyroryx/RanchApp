@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reitstunden Planer</title>
+  <title>Reitstunden Wochenplan</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
       margin: 1rem;
-      background: #f0f0f0;
+      background: #000;
+      color: white;
     }
     header {
       text-align: center;
@@ -24,35 +25,38 @@
     }
     form {
       margin-bottom: 2rem;
-      background: white;
+      background: #222;
       padding: 1rem;
       border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     input, select, button {
+      width: 100%;
       margin-top: 0.5rem;
       padding: 0.5rem;
       border-radius: 5px;
       border: 1px solid #ccc;
-      width: 100%;
+      background: #333;
+      color: white;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      background: #111;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 0.5rem;
+      padding: 1rem;
       text-align: center;
+      cursor: pointer;
+      min-width: 100px;
     }
     th {
-      background: #4CAF50;
+      background: #444;
       color: white;
     }
     .highlight {
-      background-color: #dff0d8;
+      background-color: #4CAF50;
+      color: black;
     }
     .button-container {
       text-align: center;
@@ -75,7 +79,7 @@
 <body>
   <header>
     <img src="logo_v99.png" alt="Patchy Ranch Logo">
-    <h1>Reitstunden Planer</h1>
+    <h1>Reitstunden Wochenplan</h1>
   </header>
 
   <form id="addForm">
@@ -83,8 +87,7 @@
     <input type="text" id="schueler" required>
 
     <label>Wochentag:</label>
-    <select id="wochentag" required>
-      <option value="">Bitte wählen</option>
+    <select id="wochentag">
       <option>Montag</option>
       <option>Dienstag</option>
       <option>Mittwoch</option>
@@ -94,25 +97,23 @@
       <option>Sonntag</option>
     </select>
 
-    <label>Tag (Datum):</label>
-    <input type="number" id="tag" min="1" max="31" required>
+    <label>Tag (Zahl):</label>
+    <input type="number" id="tag" required min="1" max="31">
 
     <label>Monat:</label>
-    <select id="monat" required>
-      <option>Januar</option><option>Februar</option><option>März</option>
-      <option>April</option><option>Mai</option><option>Juni</option>
-      <option>Juli</option><option>August</option><option>September</option>
-      <option>Oktober</option><option>November</option><option>Dezember</option>
+    <select id="monat">
+      <option>Januar</option><option>Februar</option><option>März</option><option>April</option><option>Mai</option><option>Juni</option>
+      <option>Juli</option><option>August</option><option>September</option><option>Oktober</option><option>November</option><option>Dezember</option>
     </select>
+
+    <label>Pferd / Notiz:</label>
+    <input type="text" id="notiz">
 
     <label>Typ:</label>
     <select id="typ">
       <option>Reitstunde</option>
       <option>Reitbeteiligung</option>
     </select>
-
-    <label>Pferd / Notiz:</label>
-    <input type="text" id="notiz">
 
     <button type="submit">Eintragen</button>
   </form>
@@ -122,10 +123,10 @@
   </div>
 
   <div id="printArea" style="overflow-x:auto">
-    <table id="planTabelle">
+    <table id="wochenTabelle">
       <thead>
         <tr id="headerRow">
-          <th>Schüler (Zähler)</th>
+          <th>Name / Datum</th>
         </tr>
       </thead>
       <tbody id="tabelleBody"></tbody>
@@ -135,34 +136,43 @@
   <script>
     let eintraege = JSON.parse(localStorage.getItem('reitplan')) || [];
 
-    const speichern = () => localStorage.setItem('reitplan', JSON.stringify(eintraege));
+    const speichern = () => {
+      localStorage.setItem('reitplan', JSON.stringify(eintraege));
+    };
 
-    function anzeigen() {
-      const schuelerListe = [...new Set(eintraege.map(e => e.schueler))].sort();
-      const tage = [...new Set(eintraege.map(e => `${e.wochentag} ${e.tag}. ${e.monat}`))].sort();
-
+    const anzeigen = () => {
+      const tabelle = document.getElementById('wochenTabelle');
       const headerRow = document.getElementById('headerRow');
-      const tabelleBody = document.getElementById('tabelleBody');
-      headerRow.innerHTML = '<th>Schüler (Zähler)</th>';
+      const body = document.getElementById('tabelleBody');
+      headerRow.innerHTML = '<th>Name / Datum</th>';
+      body.innerHTML = '';
 
-      tage.forEach(t => {
+      let alleDaten = [...new Set(eintraege.map(e => `${e.wochentag} ${String(e.tag).padStart(2,'0')}. ${e.monat}`))];
+      const wochentageSortierung = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+      alleDaten.sort((a,b) => {
+        const [wa, da] = a.split(' ');
+        const [wb, db] = b.split(' ');
+        return wochentageSortierung.indexOf(wa) - wochentageSortierung.indexOf(wb) || parseInt(da) - parseInt(db);
+      });
+
+      alleDaten.forEach(d => {
         const th = document.createElement('th');
-        th.textContent = t;
+        th.textContent = d;
         headerRow.appendChild(th);
       });
 
-      tabelleBody.innerHTML = '';
+      const schuelerNamen = [...new Set(eintraege.map(e => e.schueler))].sort();
 
-      schuelerListe.forEach(s => {
+      schuelerNamen.forEach(name => {
         const tr = document.createElement('tr');
-        const zaehler = eintraege.filter(e => e.schueler === s).length;
         const tdName = document.createElement('td');
-        tdName.textContent = `${s} (${zaehler})`;
+        const anzahl = eintraege.filter(e => e.schueler === name).length;
+        tdName.textContent = `${name} (${anzahl})`;
         tr.appendChild(tdName);
 
-        tage.forEach(t => {
+        alleDaten.forEach(datum => {
           const td = document.createElement('td');
-          const eintrag = eintraege.find(e => e.schueler === s && `${e.wochentag} ${e.tag}. ${e.monat}` === t);
+          const eintrag = eintraege.find(e => `${e.wochentag} ${String(e.tag).padStart(2,'0')}. ${e.monat}` === datum && e.schueler === name);
           if (eintrag) {
             td.textContent = `${eintrag.typ}: ${eintrag.notiz}`;
             td.classList.add('highlight');
@@ -176,19 +186,20 @@
           }
           tr.appendChild(td);
         });
-        tabelleBody.appendChild(tr);
+
+        body.appendChild(tr);
       });
-    }
+    };
 
     document.getElementById('addForm').addEventListener('submit', e => {
       e.preventDefault();
       const eintrag = {
         schueler: document.getElementById('schueler').value.trim(),
         wochentag: document.getElementById('wochentag').value,
-        tag: document.getElementById('tag').value,
+        tag: parseInt(document.getElementById('tag').value),
         monat: document.getElementById('monat').value,
-        typ: document.getElementById('typ').value,
-        notiz: document.getElementById('notiz').value.trim()
+        notiz: document.getElementById('notiz').value.trim(),
+        typ: document.getElementById('typ').value
       };
       eintraege.push(eintrag);
       speichern();
@@ -200,7 +211,7 @@
       const element = document.getElementById('printArea');
       const opt = {
         margin: 0.5,
-        filename: 'reitplan.pdf',
+        filename: 'reitstunden.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
