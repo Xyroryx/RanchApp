@@ -3,22 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RanchApp</title>
+  <title>Reitstunden Wochenplan</title>
   <link rel="icon" href="logo_v99.png" type="image/png"/>
   <link rel="apple-touch-icon" href="logo_v99.png" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyApbpJxOwiAep9U1dgd1VtSmbXJm44phAM",
-      authDomain: "ranchapp-8eff2.firebaseapp.com",
-      projectId: "ranchapp-8eff2",
-      storageBucket: "ranchapp-8eff2.appspot.com",
-      messagingSenderId: "662200775507",
-      appId: "1:662200775507:web:63588f0221150f8fbb27a6",
-      measurementId: "G-JDR6PNZ195"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID",
+      measurementId: "YOUR_MEASUREMENT_ID"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -174,17 +175,15 @@
     }
 
     function exportPDF() {
-      import("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js").then(() => {
-        const element = document.getElementById('printArea');
-        const opt = {
-          margin: 0.5,
-          filename: 'reitstunden.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-        };
-        html2pdf().from(element).set(opt).save();
-      });
+      const element = document.getElementById('printArea');
+      const opt = {
+        margin: 0.5,
+        filename: 'reitstunden.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+      html2pdf().from(element).set(opt).save();
     }
 
     anzeigen();
