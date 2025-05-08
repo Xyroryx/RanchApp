@@ -9,94 +9,27 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
   <style>
+    /* Styling wie zuvor – ggf. gekürzt für Übersicht */
     body {
       font-family: sans-serif;
       background: #121212;
       color: #f0f0f0;
       margin: 0;
-      padding: 0;
     }
-    header {
-      background: #1e1e1e;
-      padding: 1rem;
-      text-align: center;
-    }
-    header img {
-      max-height: 80px;
-    }
-    nav {
-      display: flex;
-      justify-content: center;
-      background: #2c2c2c;
-    }
-    nav button {
-      flex: 1;
-      padding: 1rem;
-      background: #2c2c2c;
-      color: #f0f0f0;
-      border: none;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    nav button.active {
-      background: #4caf50;
-    }
-    .tab-content {
-      display: none;
-      padding: 1rem;
-    }
-    .tab-content.active {
-      display: block;
-    }
-    form {
-      background: #1e1e1e;
-      padding: 1rem;
-      border-radius: 10px;
-      margin-bottom: 1rem;
-    }
-    input, select, button {
-      width: 100%;
-      margin-top: 0.5rem;
-      padding: 0.5rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      background: #333;
-      color: white;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #1e1e1e;
-      margin-top: 1rem;
-    }
-    th, td {
-      border: 1px solid #444;
-      padding: 0.5rem;
-      text-align: center;
-    }
-    th {
-      background: #4caf50;
-    }
-    .highlight {
-      background-color: #2d662d;
-    }
-    .button-container {
-      margin-top: 1rem;
-      text-align: center;
-    }
-    .pdf-button, .excel-button {
-      padding: 0.7rem 2rem;
-      font-size: 1rem;
-      background: #e91e63;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      margin: 0.5rem;
-      cursor: pointer;
-    }
-    .pdf-button:hover, .excel-button:hover {
-      background: #c2185b;
-    }
+    header { background: #1e1e1e; padding: 1rem; text-align: center; }
+    header img { max-height: 80px; }
+    nav { display: flex; background: #2c2c2c; }
+    nav button { flex: 1; padding: 1rem; background: #2c2c2c; color: #fff; border: none; cursor: pointer; }
+    nav button.active { background: #4caf50; }
+    .tab-content { display: none; padding: 1rem; }
+    .tab-content.active { display: block; }
+    input, select, button { width: 100%; margin-top: 0.5rem; padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; background: #333; color: white; }
+    table { width: 100%; border-collapse: collapse; background: #1e1e1e; margin-top: 1rem; }
+    th, td { border: 1px solid #444; padding: 0.5rem; text-align: center; }
+    th { background: #4caf50; }
+    .button-container { margin-top: 1rem; text-align: center; }
+    .pdf-button, .excel-button { padding: 0.7rem 2rem; font-size: 1rem; background: #e91e63; color: white; border: none; border-radius: 5px; margin: 0.5rem; cursor: pointer; }
+    .pdf-button:hover, .excel-button:hover { background: #c2185b; }
   </style>
 </head>
 <body>
@@ -110,25 +43,14 @@
   </nav>
   <div id="reitstunden" class="tab-content active">
     <form id="addForm">
-      <label>Schülername:</label>
-      <input type="text" id="schueler" required />
-      <label>Wochentag:</label>
+      <input type="text" id="schueler" placeholder="Schülername" required />
       <select id="wochentag">
-        <option>Montag</option>
-        <option>Dienstag</option>
-        <option>Mittwoch</option>
-        <option>Donnerstag</option>
-        <option>Freitag</option>
-        <option>Samstag</option>
-        <option>Sonntag</option>
+        <option>Montag</option><option>Dienstag</option><option>Mittwoch</option>
+        <option>Donnerstag</option><option>Freitag</option><option>Samstag</option><option>Sonntag</option>
       </select>
-      <label>Datum:</label>
       <input type="date" id="datum" required />
-      <label>Uhrzeit (optional):</label>
-      <input type="time" id="uhrzeit" />
-      <label>Pferd / Notiz:</label>
-      <input type="text" id="notiz" />
-      <label>Typ:</label>
+      <input type="time" id="uhrzeit" placeholder="Uhrzeit (optional)" />
+      <input type="text" id="notiz" placeholder="Pferd / Notiz" />
       <select id="typ">
         <option>Reitstunde</option>
         <option>Reitbeteiligung</option>
@@ -136,34 +58,29 @@
       <button type="submit">Eintragen</button>
     </form>
     <div class="button-container">
-      <label for="monatFilter">Nach Monat filtern:</label>
       <select id="monatFilter" onchange="anzeigen()">
-        <option value="">Alle</option>
+        <option value="">Alle Monate</option>
       </select>
-      <label for="typFilter">Typ filtern:</label>
       <select id="typFilter" onchange="anzeigen()">
-        <option value="">Alle</option>
+        <option value="">Alle Typen</option>
         <option value="Reitstunde">Reitstunde</option>
         <option value="Reitbeteiligung">Reitbeteiligung</option>
       </select>
-      <button class="pdf-button" onclick="exportPDF()">PDF exportieren</button>
-      <button class="excel-button" onclick="exportExcel()">Excel exportieren</button>
+      <button class="pdf-button" onclick="exportPDF()">PDF</button>
+      <button class="excel-button" onclick="exportExcel()">Excel</button>
     </div>
-    <div id="printArea" style="overflow-x:auto">
+    <div id="printArea">
       <table id="wochenTabelle">
-        <thead>
-          <tr id="headerRow">
-            <th>Schüler</th>
-          </tr>
-        </thead>
+        <thead><tr id="headerRow"><th>Schüler</th></tr></thead>
         <tbody id="tabelleBody"></tbody>
       </table>
     </div>
   </div>
   <div id="futterplatz" class="tab-content">
     <h2>Futterplatz</h2>
-    <p>Hier kannst du zukünftig Futterpläne verwalten.</p>
+    <p>Hier entsteht dein Futterplatz-System.</p>
   </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
@@ -174,7 +91,8 @@
       projectId: "ranchapp-8eff2",
       storageBucket: "ranchapp-8eff2.appspot.com",
       messagingSenderId: "662200775507",
-      appId: "1:662200775507:web:63588f0221150f8fbb27a6"
+      appId: "1:662200775507:web:63588f0221150f8fbb27a6",
+      measurementId: "G-JDR6PNZ195"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -185,14 +103,61 @@
     };
 
     const laden = async () => {
-      const snapshot = await getDocs(collection(db, "reitstunden"));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const snap = await getDocs(collection(db, "reitstunden"));
+      return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     };
 
-    const loeschen = async (id) => {
-      await deleteDoc(doc(db, "reitstunden", id));
-      anzeigen();
+    const anzeigen = async () => {
+      const daten = await laden();
+      const monatFilter = document.getElementById("monatFilter").value;
+      const typFilter = document.getElementById("typFilter").value;
+
+      const gefiltert = daten.filter(e => {
+        const monatName = new Date(e.datum).toLocaleString("de-DE", { month: "long" });
+        return (!monatFilter || monatName === monatFilter) && (!typFilter || e.typ === typFilter);
+      });
+
+      const uniqueSchueler = [...new Set(gefiltert.map(e => e.schueler))];
+      const uniqueTage = [...new Set(gefiltert.map(e => e.datum))].sort();
+      document.getElementById("headerRow").innerHTML = `<th>Schüler</th>` + uniqueTage.map(d => `<th>${d}</th>`).join("");
+
+      const tbody = document.getElementById("tabelleBody");
+      tbody.innerHTML = "";
+
+      uniqueSchueler.forEach(schueler => {
+        const zeile = document.createElement("tr");
+        zeile.innerHTML = `<td>${schueler}</td>` + uniqueTage.map(datum => {
+          const eintrag = gefiltert.find(e => e.schueler === schueler && e.datum === datum);
+          return `<td>${eintrag ? `${eintrag.typ}${eintrag.uhrzeit ? ' ('+eintrag.uhrzeit+')' : ''}` : ''}</td>`;
+        }).join("");
+        tbody.appendChild(zeile);
+      });
+
+      const monate = [...new Set(daten.map(e => new Date(e.datum).toLocaleString("de-DE", { month: "long" })))];
+      const filter = document.getElementById("monatFilter");
+      filter.innerHTML = `<option value="">Alle Monate</option>`;
+      monate.forEach(monat => {
+        const opt = document.createElement("option");
+        opt.value = monat;
+        opt.textContent = monat;
+        filter.appendChild(opt);
+      });
     };
+
+    document.getElementById("addForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const eintrag = {
+        schueler: document.getElementById("schueler").value.trim(),
+        wochentag: document.getElementById("wochentag").value,
+        datum: document.getElementById("datum").value,
+        uhrzeit: document.getElementById("uhrzeit").value,
+        notiz: document.getElementById("notiz").value,
+        typ: document.getElementById("typ").value
+      };
+      await speichern(eintrag);
+      e.target.reset();
+      anzeigen();
+    });
 
     window.exportPDF = function () {
       const element = document.getElementById("printArea");
@@ -213,30 +178,18 @@
       XLSX.writeFile(wb, "reitstunden.xlsx");
     };
 
-    document.getElementById("addForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const eintrag = {
-        schueler: document.getElementById("schueler").value.trim(),
-        wochentag: document.getElementById("wochentag").value,
-        datum: document.getElementById("datum").value,
-        uhrzeit: document.getElementById("uhrzeit").value || "",
-        notiz: document.getElementById("notiz").value.trim(),
-        typ: document.getElementById("typ").value
-      };
-      await speichern(eintrag);
-      e.target.reset();
-      anzeigen();
+    // Tab-Funktion
+    document.querySelectorAll(".tab-button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(tab => tab.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
     });
 
-    window.anzeigen = async () => {
-      const daten = await laden();
-      const monatFilter = document.getElementById("monatFilter").value;
-      const typFilter = document.getElementById("typFilter").value;
-
-      const gefiltert = daten.filter(e => {
-        const monatName = new Date(e.datum).toLocaleString("de-DE", { month: "long" });
-        return (!monatFilter || monatName === monatFilter) && (!typFilter || e.typ === typFilter);
-      });
-
-      const monate = [...new Set(daten.map(e => new Date(e.datum).toLocaleString("de-DE", { month: "long" })))];
-      const 
+    // Initial anzeigen
+    anzeigen();
+  </script>
+</body>
+</html>
