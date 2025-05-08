@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reitstunden Wochenplan</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4CAF50">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -62,17 +63,13 @@
       margin-top: 1rem;
     }
     .pdf-button {
-      margin: 0.5rem;
-      padding: 0.7rem 1.5rem;
+      padding: 0.7rem 2rem;
       font-size: 1rem;
       background: #2196F3;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
     }
     .pdf-button:hover {
       background: #0b7dda;
@@ -81,25 +78,25 @@
 </head>
 <body>
   <header>
-    <img src="logo_v99.png" alt="Patchy Ranch Logo" />
+    <img src="logo_v99.png" alt="Patchy Ranch Logo">
     <h1>Reitstunden Wochenplan</h1>
   </header>
 
   <form id="addForm">
-    <label>Schülername:</label>
-    <input type="text" id="schueler" required />
-
-    <label>Tag & Uhrzeit (z. B. Montag 15:00):</label>
-    <input type="text" id="zeit" required />
-
-    <label>Pferd / Notiz:</label>
-    <input type="text" id="notiz" />
-
-    <label>Typ:</label>
+    <label>Art:</label>
     <select id="typ">
       <option value="Reitstunde">Reitstunde</option>
       <option value="Reitbeteiligung">Reitbeteiligung</option>
     </select>
+
+    <label>Schülername:</label>
+    <input type="text" id="schueler" required>
+
+    <label>Tag & Uhrzeit (z. B. Montag 15:00):</label>
+    <input type="text" id="zeit" required>
+
+    <label>Pferd / Notiz:</label>
+    <input type="text" id="notiz">
 
     <button type="submit">Eintragen</button>
   </form>
@@ -109,25 +106,7 @@
     <select id="monatFilter" onchange="anzeigen()">
       <option value="">Alle</option>
     </select>
-
-    <label for="typFilter">Typ:</label>
-    <select id="typFilter" onchange="anzeigen()">
-      <option value="">Alle</option>
-      <option value="Reitstunde">Reitstunde</option>
-      <option value="Reitbeteiligung">Reitbeteiligung</option>
-    </select>
-
-    <br/>
-
-    <button class="pdf-button" onclick="exportPDF()">
-      <i data-lucide="file-text"></i> PDF exportieren
-    </button>
-    <button class="pdf-button" onclick="exportVisibleToExcel()">
-      <i data-lucide="table"></i> Excel (sichtbar)
-    </button>
-    <button class="pdf-button" onclick="exportAllToExcel()">
-      <i data-lucide="table-properties"></i> Excel (alle)
-    </button>
+    <button class="pdf-button" onclick="exportPDF()">PDF exportieren</button>
   </div>
 
   <div id="printArea" style="overflow-x:auto">
@@ -183,12 +162,7 @@
 
     const anzeigen = () => {
       const monatFilter = document.getElementById('monatFilter').value;
-      const typFilter = document.getElementById('typFilter').value;
-
-      let gefiltert = stunden;
-      if (monatFilter) gefiltert = gefiltert.filter(e => e.zeit.includes(monatFilter));
-      if (typFilter) gefiltert = gefiltert.filter(e => e.typ === typFilter);
-
+      const gefiltert = monatFilter ? stunden.filter(e => e.zeit.includes(monatFilter)) : stunden;
       updateSets(gefiltert);
       updateFilterDropdown();
 
@@ -216,7 +190,7 @@
           const td = document.createElement('td');
           const match = gefiltert.find(e => e.zeit === zeit && e.schueler === s);
           if (match) {
-            td.textContent = match.notiz;
+            td.textContent = `${match.typ}: ${match.notiz}`;
             td.classList.add('highlight');
             td.onclick = () => {
               if (confirm('Eintrag löschen?')) {
@@ -231,17 +205,15 @@
 
         tabelleBody.appendChild(tr);
       });
-
-      lucide.createIcons(); // wichtig für Icon-Rendering
     };
 
     document.getElementById('addForm').addEventListener('submit', e => {
       e.preventDefault();
       const eintrag = {
+        typ: document.getElementById('typ').value,
         schueler: document.getElementById('schueler').value.trim(),
         zeit: document.getElementById('zeit').value.trim(),
-        notiz: document.getElementById('notiz').value.trim(),
-        typ: document.getElementById('typ').value
+        notiz: document.getElementById('notiz').value.trim()
       };
       stunden.push(eintrag);
       speichern();
@@ -261,32 +233,12 @@
       html2pdf().from(element).set(opt).save();
     }
 
-    function exportVisibleToExcel() {
-      const rows = Array.from(document.querySelectorAll("#wochenTabelle tr"));
-      const csv = rows.map(row =>
-        Array.from(row.cells).map(cell => `"${cell.textContent}"`).join(",")
-      ).join("\n");
-      downloadCSV(csv, "sichtbare_reitstunden.csv");
-    }
-
-    function exportAllToExcel() {
-      const header = ["Zeit", "Schüler", "Notiz", "Typ"];
-      const csv = [header.join(",")].concat(
-        stunden.map(e => [e.zeit, e.schueler, e.notiz, e.typ].map(f => `"${f}"`).join(","))
-      ).join("\n");
-      downloadCSV(csv, "alle_reitstunden.csv");
-    }
-
-    function downloadCSV(csv, filename) {
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", filename);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js').then(() => {
+        console.log("Service Worker registriert");
+      }).catch(error => {
+        console.error("SW-Fehler:", error);
+      });
     }
 
     anzeigen();
