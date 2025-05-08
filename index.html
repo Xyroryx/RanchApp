@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reitstunden Plan</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reitstunden Wochenplan</title>
+  <link rel="icon" href="logo_v99.png" type="image/png">
+  <link rel="apple-touch-icon" href="logo_v99.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyApbpJxOwiAep9U1dgd1VtSmbXJm44phAM",
@@ -20,131 +23,174 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const colRef = collection(db, "reitstunden");
 
-    const form = document.getElementById("addForm");
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const schueler = document.getElementById("schueler").value;
-      const wochentag = document.getElementById("wochentag").value;
-      const datum = document.getElementById("datum").value;
-      const typ = document.getElementById("typ").value;
-      const notiz = document.getElementById("notiz").value;
+    const form = document.getElementById('addForm');
+    const tabelleBody = document.getElementById('tabelleBody');
+    const headerRow = document.getElementById('headerRow');
 
-      await addDoc(colRef, {
-        schueler,
-        wochentag,
-        datum,
-        typ,
-        notiz
+    const wochentage = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+
+    const anzeigen = async () => {
+      const querySnapshot = await getDocs(collection(db, 'reitstunden'));
+      const daten = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const schuelerListe = [...new Set(daten.map(e => e.schueler))].sort();
+      headerRow.innerHTML = '<th>Schüler</th>' + wochentage.map(w => `<th>${w}</th>`).join('');
+      tabelleBody.innerHTML = '';
+
+      schuelerListe.forEach(name => {
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        const count = daten.filter(e => e.schueler === name).length;
+        tdName.textContent = `${name} (${count})`;
+        tr.appendChild(tdName);
+
+        wochentage.forEach(tag => {
+          const td = document.createElement('td');
+          const eintraege = daten.filter(e => e.schueler === name && e.wochentag === tag);
+          if (eintraege.length) {
+            td.classList.add('highlight');
+            td.innerHTML = eintraege.map(e => `${e.typ}<br>${e.notiz}`).join('<hr>');
+            td.onclick = async () => {
+              if (confirm('Eintrag löschen?')) {
+                await Promise.all(eintraege.map(e => deleteDoc(doc(db, 'reitstunden', e.id))));
+                anzeigen();
+              }
+            }
+          }
+          tr.appendChild(td);
+        });
+
+        tabelleBody.appendChild(tr);
       });
+    };
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const eintrag = {
+        schueler: document.getElementById('schueler').value.trim(),
+        wochentag: document.getElementById('wochentag').value,
+        datum: document.getElementById('datum').value,
+        notiz: document.getElementById('notiz').value.trim(),
+        typ: document.getElementById('typ').value
+      };
+      await addDoc(collection(db, 'reitstunden'), eintrag);
       form.reset();
       anzeigen();
     });
 
-    async function anzeigen() {
-      const tableBody = document.getElementById("tabelleBody");
-      tableBody.innerHTML = "";
+    window.exportPDF = () => {
+      const element = document.getElementById('printArea');
+      const opt = {
+        margin: 0.5,
+        filename: 'reitstunden.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+      html2pdf().from(element).set(opt).save();
+    };
 
-      const snapshot = await getDocs(colRef);
-      const daten = {};
-
-      snapshot.forEach((doc) => {
-        const d = doc.data();
-        if (!daten[d.schueler]) daten[d.schueler] = {};
-        if (!daten[d.schueler][d.wochentag]) daten[d.schueler][d.wochentag] = [];
-        daten[d.schueler][d.wochentag].push({ ...d, id: doc.id });
-      });
-
-      Object.keys(daten).sort().forEach((name) => {
-        const tr = document.createElement("tr");
-        const tdName = document.createElement("td");
-        tdName.textContent = name;
-        tr.appendChild(tdName);
-
-        ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"].forEach((tag) => {
-          const td = document.createElement("td");
-          const eintraege = daten[name][tag] || [];
-          eintraege.forEach(e => {
-            const div = document.createElement("div");
-            div.textContent = `${e.typ} - ${e.notiz}`;
-            div.style.cursor = "pointer";
-            div.onclick = async () => {
-              if (confirm("Eintrag löschen?")) {
-                await deleteDoc(doc(db, "reitstunden", e.id));
-                anzeigen();
-              }
-            };
-            td.appendChild(div);
-          });
-          tr.appendChild(td);
-        });
-        tableBody.appendChild(tr);
-      });
-    }
-
-    window.onload = anzeigen;
+    anzeigen();
   </script>
   <style>
     body {
       font-family: sans-serif;
+      margin: 1rem;
       background: black;
       color: white;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    header img {
+      max-height: 100px;
+      margin-bottom: 0.5rem;
+    }
+    form {
+      background: #222;
       padding: 1rem;
+      border-radius: 10px;
     }
     input, select, button {
-      display: block;
-      margin: 0.5rem 0;
       width: 100%;
+      margin-top: 0.5rem;
       padding: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background: #333;
+      color: white;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
       background: #111;
     }
     th, td {
-      border: 1px solid #555;
+      border: 1px solid #ccc;
       padding: 0.5rem;
       text-align: center;
     }
     th {
-      background: #333;
+      background: #4CAF50;
+    }
+    .highlight {
+      background-color: #2d662d;
+    }
+    .button-container {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .pdf-button {
+      padding: 0.7rem 2rem;
+      font-size: 1rem;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    .pdf-button:hover {
+      background: #0b7dda;
     }
   </style>
 </head>
 <body>
-  <h1>Reitstundenplan</h1>
+  <header>
+    <img src="logo_v99.png" alt="Patchy Ranch Logo">
+    <h1>Reitstunden Wochenplan</h1>
+  </header>
   <form id="addForm">
-    <input id="schueler" placeholder="Schülername" required />
+    <label>Schülername:</label>
+    <input type="text" id="schueler" required>
+    <label>Wochentag:</label>
     <select id="wochentag">
       <option>Montag</option><option>Dienstag</option><option>Mittwoch</option>
       <option>Donnerstag</option><option>Freitag</option><option>Samstag</option><option>Sonntag</option>
     </select>
-    <input type="date" id="datum" required />
-    <input id="notiz" placeholder="Pferd / Notiz" />
+    <label>Datum:</label>
+    <input type="date" id="datum" required>
+    <label>Pferd / Notiz:</label>
+    <input type="text" id="notiz">
+    <label>Typ:</label>
     <select id="typ">
       <option>Reitstunde</option>
       <option>Reitbeteiligung</option>
     </select>
-    <button>Eintragen</button>
+    <button type="submit">Eintragen</button>
   </form>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Schüler</th>
-        <th>Montag</th>
-        <th>Dienstag</th>
-        <th>Mittwoch</th>
-        <th>Donnerstag</th>
-        <th>Freitag</th>
-        <th>Samstag</th>
-        <th>Sonntag</th>
-      </tr>
-    </thead>
-    <tbody id="tabelleBody"></tbody>
-  </table>
+  <div class="button-container">
+    <button class="pdf-button" onclick="exportPDF()">PDF exportieren</button>
+  </div>
+  <div id="printArea" style="overflow-x:auto">
+    <table id="wochenTabelle">
+      <thead>
+        <tr id="headerRow">
+          <th>Schüler</th>
+        </tr>
+      </thead>
+      <tbody id="tabelleBody"></tbody>
+    </table>
+  </div>
 </body>
 </html>
