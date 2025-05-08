@@ -6,7 +6,7 @@
   <title>Reitstunden Wochenplan</title>
   <link rel="icon" href="logo_v99.png" type="image/png">
   <link rel="apple-touch-icon" href="logo_v99.png">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
@@ -57,25 +57,27 @@
       margin-top: 1rem;
       text-align: center;
     }
-    .pdf-button {
+    .pdf-button, .excel-button {
       padding: 0.7rem 2rem;
       font-size: 1rem;
-      background: #2196F3;
-      color: white;
       border: none;
       border-radius: 5px;
+      margin: 0.5rem;
+      cursor: pointer;
+    }
+    .pdf-button {
+      background: #2196F3;
+      color: white;
     }
     .pdf-button:hover {
       background: #0b7dda;
     }
     .excel-button {
-      padding: 0.7rem 2rem;
-      font-size: 1rem;
-      background: deeppink;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      margin-left: 1rem;
+      background: pink;
+      color: black;
+    }
+    .excel-button:hover {
+      background: #ff69b4;
     }
   </style>
 </head>
@@ -123,53 +125,21 @@
       <tbody id="tabelleBody"></tbody>
     </table>
   </div>
+  <script>
+    let stunden = JSON.parse(localStorage.getItem('wochenplan')) || [];
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+    const speichern = () => localStorage.setItem('wochenplan', JSON.stringify(stunden));
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyApbpJxOwiAep9U1dgd1VtSmbXJm44phAM",
-      authDomain: "ranchapp-8eff2.firebaseapp.com",
-      projectId: "ranchapp-8eff2",
-      storageBucket: "ranchapp-8eff2.appspot.com",
-      messagingSenderId: "662200775507",
-      appId: "1:662200775507:web:63588f0221150f8fbb27a6",
-      measurementId: "G-JDR6PNZ195"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const colRef = collection(db, "reitstunden");
-
-    let stunden = [];
-
-    async function laden() {
-      const snapshot = await getDocs(colRef);
-      stunden = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      anzeigen();
-    }
-
-    async function speichern(eintrag) {
-      await addDoc(colRef, eintrag);
-      laden();
-    }
-
-    async function loeschen(id) {
-      await deleteDoc(doc(db, "reitstunden", id));
-      laden();
-    }
-
-    function extractMonate() {
+    const extractMonate = () => {
       const monate = new Set();
       stunden.forEach(e => {
         const monat = new Date(e.datum).toLocaleString('de-DE', { month: 'long' });
         if (monat) monate.add(monat);
       });
       return Array.from(monate);
-    }
+    };
 
-    function updateFilterDropdown() {
+    const updateFilterDropdown = () => {
       const filter = document.getElementById('monatFilter');
       const selected = filter.value;
       filter.innerHTML = '<option value="">Alle</option>';
@@ -180,9 +150,9 @@
         if (m === selected) option.selected = true;
         filter.appendChild(option);
       });
-    }
+    };
 
-    function anzeigen() {
+    const anzeigen = () => {
       const monatFilter = document.getElementById('monatFilter').value;
       const gefiltert = monatFilter ? stunden.filter(e => new Date(e.datum).toLocaleString('de-DE', { month: 'long' }) === monatFilter) : stunden;
       updateFilterDropdown();
@@ -190,6 +160,7 @@
       const headerRow = document.getElementById('headerRow');
       const tabelleBody = document.getElementById('tabelleBody');
       headerRow.innerHTML = '<th>Schüler</th>';
+
       const wochentage = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
       wochentage.forEach(tag => {
         const th = document.createElement('th');
@@ -212,9 +183,13 @@
           const eintraege = gefiltert.filter(e => e.schueler === name && e.wochentag === tag);
           if (eintraege.length) {
             td.classList.add('highlight');
-            td.innerHTML = eintraege.map(e => `${new Date(e.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}: ${e.typ}${e.uhrzeit ? ' - ' + e.uhrzeit : ''}<br>${e.notiz}`).join('<hr>');
+            td.innerHTML = eintraege.map(e => `${e.datum.slice(5)}<br>${e.typ}${e.uhrzeit ? '<br>' + e.uhrzeit : ''}<br>${e.notiz}`).join('<hr>');
             td.onclick = () => {
-              if (confirm('Eintrag löschen?')) loeschen(eintraege[0].id);
+              if (confirm('Eintrag löschen?')) {
+                stunden = stunden.filter(e => !(e.schueler === name && e.wochentag === tag));
+                speichern();
+                anzeigen();
+              }
             };
           }
           tr.appendChild(td);
@@ -222,7 +197,7 @@
 
         tabelleBody.appendChild(tr);
       });
-    }
+    };
 
     document.getElementById('addForm').addEventListener('submit', e => {
       e.preventDefault();
@@ -230,11 +205,13 @@
         schueler: document.getElementById('schueler').value.trim(),
         wochentag: document.getElementById('wochentag').value,
         datum: document.getElementById('datum').value,
-        uhrzeit: document.getElementById('uhrzeit').value || '',
+        uhrzeit: document.getElementById('uhrzeit').value,
         notiz: document.getElementById('notiz').value.trim(),
         typ: document.getElementById('typ').value
       };
-      speichern(eintrag);
+      stunden.push(eintrag);
+      speichern();
+      anzeigen();
       e.target.reset();
     });
 
@@ -253,10 +230,10 @@
     function exportExcel() {
       const table = document.getElementById('wochenTabelle');
       const wb = XLSX.utils.table_to_book(table, { sheet: "Reitstunden" });
-      XLSX.writeFile(wb, 'reitstunden.xlsx');
+      XLSX.writeFile(wb, "reitstunden.xlsx");
     }
 
-    laden();
+    anzeigen();
   </script>
 </body>
 </html>
